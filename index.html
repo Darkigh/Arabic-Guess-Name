@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>خمّن صورتك</title>
+<link href="https://fonts.googleapis.com/css2?family=Tajawal:wght@400;700;800&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:light;--bg:#f6f3ee;--card:#fff;--ink:#1d1b19;--mut:#6b655d;--acc:#0f766e;--accink:#fff;--soft:#fde68a;--line:#e3ddd3;--ok:#15803d;--bad:#b91c1c;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#14120f;--card:#201d19;--ink:#f3eee6;--mut:#a39b8f;--acc:#2dd4bf;--accink:#06201c;--soft:#4a3d12;--line:#38332c;--ok:#4ade80;--bad:#f87171}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#14120f;--card:#201d19;--ink:#f3eee6;--mut:#a39b8f;--acc:#2dd4bf;--accink:#06201c;--soft:#4a3d12;--line:#38332c;--ok:#4ade80;--bad:#f87171}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Tajawal","Segoe UI",Tahoma,system-ui,sans-serif;line-height:1.6}
+main{max-width:720px;margin:0 auto;padding:16px}
+h1{font-size:28px;margin:8px 0 2px;font-weight:800}
+h2{font-size:18px;margin:0 0 10px}
+p.sub{color:var(--mut);margin:0 0 16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:16px;margin-bottom:14px}
+input,select{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0}
+input{flex:1}
+button{font:inherit;font-weight:700;border:0;border-radius:10px;padding:10px 16px;background:var(--acc);color:var(--accink);cursor:pointer}
+button.ghost{background:transparent;color:var(--mut);border:1px solid var(--line)}
+button:disabled{opacity:.45;cursor:default}
+.row{display:flex;gap:8px;align-items:center;margin-top:10px}
+.bar{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.code{font-size:26px;letter-spacing:6px;background:var(--soft);padding:2px 12px;border-radius:10px;direction:ltr;display:inline-block}
+.err{color:var(--bad);min-height:24px;margin:8px 0 0}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px}
+.tile{background:var(--bg);border:2px solid var(--line);border-radius:16px;padding:12px 8px;text-align:center}
+.tile.me{border-color:var(--acc)}
+.tile.ok{border-color:var(--ok)}
+.pic{font-size:58px;line-height:1.2}
+.nm{font-weight:700}
+.ans{color:var(--ok);font-weight:700}
+.hint{color:var(--mut);font-size:13px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{background:var(--bg);border:1px solid var(--line);border-radius:999px;padding:4px 14px}
+.banner{background:var(--soft);border-radius:12px;padding:10px 14px;margin-bottom:12px;font-weight:700}
+#msgs{height:240px;overflow-y:auto;border:1px solid var(--line);border-radius:12px;padding:8px 12px;background:var(--bg)}
+.m{margin:3px 0;word-break:break-word}
+.m.sys{color:var(--mut);font-size:14px}
+.set{display:flex;flex-direction:column;flex:1;gap:2px}.set select{width:100%}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main>
+<div id="load"><h1>🎭 خمّن صورتك</h1><p class="sub">جارٍ التحميل…</p></div>
+
+<div id="home" hidden>
+  <h1>🎭 خمّن صورتك</h1>
+  <p class="sub">لكل لاعب صورة فوق رأسه لا يراها، ويرى صور الآخرين. اسأل في الدردشة وخمّن صورتك! (حتى ٤ لاعبين)</p>
+  <div class="card">
+    <h2>اسمك</h2>
+    <input id="name" maxlength="16" placeholder="اكتب اسمك">
+    <div class="row"><button id="create">إنشاء غرفة جديدة</button></div>
+  </div>
+  <div class="card">
+    <h2>الانضمام إلى غرفة</h2>
+    <div class="row"><input id="joincode" maxlength="4" placeholder="رمز الغرفة" style="direction:ltr;text-transform:uppercase;text-align:center"><button id="join">انضمام</button></div>
+  </div>
+  <div class="err" id="err"></div>
+</div>
+
+<div id="game" hidden>
+  <div class="bar"><div>الغرفة: <span class="code" id="code"></span></div><button class="ghost" id="leave">خروج</button></div>
+  <div id="stage"></div>
+  <div class="card" id="guessbar" hidden>
+    <h2>🎯 هل عرفت صورتك؟</h2>
+    <div class="row" style="margin-top:0"><input id="guess" maxlength="30" placeholder="اكتب تخمينك"><button id="gbtn">خمّن!</button><button class="ghost" id="giveup">🏳️ استسلام</button></div>
+  </div>
+  <div class="card">
+    <h2>💬 الدردشة</h2>
+    <div id="msgs"></div>
+    <div class="row"><input id="msg" maxlength="200" placeholder="اكتب رسالة…"><button id="send">إرسال</button></div>
+  </div>
+</div>
+</main>
+
+<script>
+(()=>{
+const store=new Map(),subs=new Set();let ws,res;const ready=new Promise(r=>res=r);
+const rid=()=>Math.random().toString(36).slice(2,12);
+let pid;try{pid=localStorage.getItem('pid')}catch(e){}
+if(!pid){pid=rid();try{localStorage.setItem('pid',pid)}catch(e){}}
+const par=p=>p.slice(0,p.lastIndexOf('/'));
+const notify=p=>subs.forEach(s=>s.m(p)&&s.run());
+function put(p,d){d?store.set(p,d):store.delete(p);notify(p)}
+function connect(){
+  ws=new WebSocket((location.protocol==='https:'?'wss://':'ws://')+location.host);
+  ws.onmessage=e=>{const m=JSON.parse(e.data);
+    if(m.t==='init'){store.clear();m.docs.forEach(([p,d])=>store.set(p,d));res();subs.forEach(s=>s.run())}
+    else put(m.path,m.data)};
+  ws.onclose=()=>setTimeout(connect,1000);
+}
+connect();
+const tx=m=>ready.then(()=>{if(ws.readyState===1)ws.send(JSON.stringify(m))});
+function sub(m,run){const s={m,run};subs.add(s);ready.then(()=>subs.has(s)&&run());return()=>subs.delete(s)}
+const dsnap=p=>{const d=store.get(p);return{id:p.split('/').pop(),exists:!!d,data:()=>d}};
+function docRef(p){return{
+  get:async()=>(await ready,dsnap(p)),
+  set:async d=>{await ready;put(p,{...d});tx({t:'set',path:p,data:d})},
+  update:async d=>{await ready;put(p,{...(store.get(p)||{}),...d});tx({t:'upd',path:p,data:d})},
+  delete:async()=>{await ready;put(p,null);tx({t:'del',path:p})},
+  onSnapshot:fn=>sub(k=>k===p,()=>fn(dsnap(p)))
+}}
+function colRef(p,ord,lim){
+  const rows=()=>{
+    let r=[...store].filter(([k])=>k.startsWith(p+'/')&&!k.slice(p.length+1).includes('/')).map(([k,d])=>({id:k.split('/').pop(),data:()=>d,_d:d}));
+    if(ord)r.sort((a,b)=>(a._d[ord[0]]-b._d[ord[0]])*(ord[1]==='desc'?-1:1));
+    return lim?r.slice(0,lim):r};
+  const snap=()=>({docs:rows()});
+  return{
+    get:async()=>(await ready,snap()),
+    onSnapshot:fn=>sub(k=>par(k)===p,()=>fn(snap())),
+    orderBy:(f,d)=>colRef(p,[f,d||'asc'],lim),
+    limit:n=>colRef(p,ord,n),
+    add:async d=>{const id=rid();await docRef(p+'/'+id).set(d);return docRef(p+'/'+id)},
+    doc:id=>docRef(p+'/'+(id||rid()))
+  }}
+const dbApi={doc:docRef,collection:p=>colRef(p)};
+window.claude={use:async n=>n==='user'?{id:async()=>pid}:n==='db'?dbApi:null};
+})();
+</script>
+<script>
+const CATS={
+'حيوانات':[['🐘','فيل'],['🦁','أسد'],['🐪','جمل'],['🐧','بطريق'],['🐢','سلحفاة'],['🦒','زرافة'],['🐬','دلفين'],['🦅','نسر'],['🐒','قرد'],['🐍','ثعبان'],['🐴','حصان'],['🦉','بومة']],
+'فواكه وخضار':[['🍎','تفاحة'],['🍌','موزة'],['🍉','بطيخ'],['🍇','عنب'],['🍓','فراولة'],['🥕','جزر'],['🍅','طماطم'],['🍋','ليمون'],['🥑','أفوكادو'],['🍍','أناناس'],['🌽','ذرة'],['🥔','بطاطس']],
+'أكل وشرب':[['🍕','بيتزا'],['🍔','برجر'],['☕','قهوة'],['🍩','دونات'],['🍦','آيس كريم'],['🥙','شاورما'],['🍚','أرز'],['🍫','شوكولاتة'],['🥐','كرواسون'],['🍰','كيكة'],['🧃','عصير'],['🍳','بيض']],
+'مهن':[['👨‍⚕️','طبيب'],['👨‍🍳','طباخ'],['👮','شرطي'],['👨‍🚀','رائد فضاء'],['👨‍🏫','معلم'],['👨‍🌾','مزارع'],['🧑‍🔧','ميكانيكي'],['👨‍🚒','إطفائي'],['🧑‍✈️','طيار'],['🥷','نينجا'],['🧑‍🎨','رسام'],['🤴','ملك']],
+'أشياء':[['⚽','كرة'],['📱','جوال'],['🔑','مفتاح'],['⏰','منبه'],['🎸','جيتار'],['☂️','مظلة'],['💡','مصباح'],['📷','كاميرا'],['🪑','كرسي'],['🧲','مغناطيس'],['🔭','تلسكوب'],['🎒','حقيبة']],
+'مواصلات':[['🚗','سيارة'],['✈️','طائرة'],['🚲','دراجة'],['🚀','صاروخ'],['🚢','سفينة'],['🚂','قطار'],['🚁','مروحية'],['🛵','دراجة نارية'],['🚜','جرار'],['🛶','قارب'],['🚌','حافلة'],['🚑','إسعاف']],
+'رياضة':[['⚽','كرة القدم'],['🏀','كرة السلة'],['🎾','تنس'],['🏊','سباحة'],['🥊','ملاكمة'],['🏹','رماية'],['🏓','تنس الطاولة'],['🚴','ركوب الدراجات'],['⛸️','تزلج'],['🏋️','رفع الأثقال'],['🤺','مبارزة'],['🏇','سباق الخيل']],
+'طبيعة':[['🌳','شجرة'],['🌹','وردة'],['🌵','صبار'],['🌋','بركان'],['🌈','قوس قزح'],['⛰️','جبل'],['🌊','موجة'],['🌙','قمر'],['☀️','شمس'],['⭐','نجمة'],['❄️','ثلج'],['🔥','نار']],
+'ملابس':[['👕','قميص'],['👖','بنطال'],['🧢','قبعة'],['👟','حذاء'],['🧣','وشاح'],['🧤','قفازات'],['👗','فستان'],['🕶️','نظارة'],['👔','ربطة عنق'],['🧦','جوارب'],['👜','حقيبة يد'],['💍','خاتم']],
+'أماكن':[['🕌','مسجد'],['🏥','مستشفى'],['🏫','مدرسة'],['🏖️','شاطئ'],['🏰','قلعة'],['🗼','برج'],['🏜️','صحراء'],['🏪','متجر'],['⛽','محطة وقود'],['🎡','مدينة ملاهي'],['🌉','جسر'],['🏟️','ملعب']]
+};
+const $=s=>document.querySelector(s);
+const el=(t,c,x)=>{const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e};
+const norm=s=>s.trim().toLowerCase().replace(/[\u064B-\u0652\u0640]/g,'').replace(/[أإآ]/g,'ا').replace(/ة/g,'ه').replace(/ى/g,'ي').replace(/\s+/g,' ').replace(/^ال/,'');
+let db,uid,uname='',room=null,roomData=null,players=[],msgs=[],unsubs=[],pickCat=null,pickRounds=null,pickSecs=null,isHost=false;
+
+function show(id){['load','home','game'].forEach(v=>$('#'+v).hidden=v!==id)}
+function err(t){$('#err').textContent=t||''}
+
+(async()=>{
+  const t=setTimeout(()=>{if(!db)$('#load .sub').textContent='تعذّر التحميل. يجب تسجيل الدخول إلى حسابك لفتح اللعبة.'},10000);
+  const u=await claude.use('user'); db=await claude.use('db');
+  if(!u||!db)return;
+  clearTimeout(t);
+  let sid='';try{sid=sessionStorage.getItem('sid')||''}catch(e){}
+  if(!sid){sid=Math.random().toString(36).slice(2,8);try{sessionStorage.setItem('sid',sid)}catch(e){}}
+  uid=String(await u.id())+'-'+sid;
+  try{$('#name').value=localStorage.getItem('gname')||''}catch(e){}
+  const h=location.hash.replace('#','');if(/^[A-Za-z]{4}$/.test(h))$('#joincode').value=h.toUpperCase();
+  show('home');
+})();
+
+$('#create').onclick=async()=>{
+  const n=$('#name').value.trim();if(!n)return err('اكتب اسمك أولاً');
+  const L='ABCDEFGHJKLMNPQRSTUVWXYZ';let c='';for(let i=0;i<4;i++)c+=L[Math.floor(Math.random()*L.length)];
+  try{await db.doc('rooms/'+c).set({host:uid,status:'lobby',category:Object.keys(CATS)[0],round:0,created:Date.now()});await joinRoom(c,n)}catch(e){err('حدث خطأ، حاول مرة أخرى')}
+};
+$('#join').onclick=async()=>{
+  const n=$('#name').value.trim();if(!n)return err('اكتب اسمك أولاً');
+  const c=$('#joincode').value.trim().toUpperCase();if(c.length!==4)return err('رمز الغرفة مكوّن من ٤ أحرف');
+  try{await joinRoom(c,n)}catch(e){err('حدث خطأ، حاول مرة أخرى')}
+};
+async function joinRoom(c,n){
+  err('');uname=n;try{localStorage.setItem('gname',n)}catch(e){}
+  const r=await db.doc('rooms/'+c).get();if(!r.exists)return err('الغرفة غير موجودة');
+  const ps=await db.collection(`rooms/${c}/players`).get();const ids=ps.docs.map(d=>d.id);
+  if(!ids.includes(uid)&&ids.length>=4)return err('الغرفة ممتلئة (٤ لاعبين)');
+  const me=db.doc(`rooms/${c}/players/${uid}`);
+  if(ids.includes(uid))await me.update({name:n});
+  else{await me.set({name:n,joined:Date.now(),card:-1,cat:'',revealed:false,gaveUp:false,score:0});await db.collection(`rooms/${c}/msgs`).add({sys:true,text:`👋 انضم ${n}`,t:Date.now()})}
+  enter(c);
+}
+function enter(c){
+  room=c;$('#code').textContent=c;
+  unsubs=[
+    db.doc('rooms/'+c).onSnapshot(s=>{roomData=s.exists?s.data():null;if(!roomData){leave(true);return}draw()}),
+    db.collection(`rooms/${c}/players`).onSnapshot(s=>{players=s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.joined-b.joined);draw()}),
+    db.collection(`rooms/${c}/msgs`).orderBy('t','desc').limit(60).onSnapshot(s=>{msgs=s.docs.map(d=>d.data()).reverse();drawChat()})
+  ];
+  show('game');
+}
+async function leave(gone){
+  unsubs.forEach(u=>u());unsubs=[];
+  if(!gone&&room){try{await db.doc(`rooms/${room}/players/${uid}`).delete()}catch(e){}}
+  room=null;roomData=null;players=[];msgs=[];show('home');
+}
+$('#leave').onclick=()=>leave(false);
+
+function tile(p,over){
+  const me=p.id===uid,it=p.card>=0&&CATS[p.cat]?CATS[p.cat][p.card]:null,seen=!me||p.revealed||over;
+  const t=el('div','tile'+(me?' me':'')+(p.revealed?' ok':''));
+  t.append(el('div','pic',seen&&it?it[0]:'؟'),el('div','nm',(me?'أنت: ':'')+p.name),el('div','hint','⭐ '+(p.score||0)));
+  if((p.revealed||over)&&it)t.append(el('div','ans',(p.revealed?(p.gaveUp?'🏳️ ':'✅ '):'⏱️ ')+it[1]));
+  else if(me)t.append(el('div','hint','صورتك فوق رأسك 🙈'));
+  return t;
+}
+function draw(){
+  if(!roomData||!room)return;
+  const mine=players.find(p=>p.id===uid);
+  isHost=roomData.host===uid||(players.length>0&&!players.some(p=>p.id===roomData.host)&&players[0].id===uid);
+  const playing=roomData.status==='playing',st=$('#stage');st.replaceChildren();
+  const box=el('div','card');
+  if(!playing){
+    box.append(el('h2',null,`في الانتظار… (${players.length}/٤)`));
+    const ch=el('div','chips');players.forEach(p=>ch.append(el('span','chip',p.name+(p.score?' ⭐'+p.score:''))));box.append(ch);
+  }else{
+    const all=players.length>1&&players.every(p=>p.revealed);
+    const over=isOver();if(over)st.append(el('div','banner',all?'🏆 كل اللاعبين انتهوا! انتهت الجولة':'⏰ انتهى الوقت! انتهت الجولة'));
+    const h2=el('h2',null,`الفئة: ${roomData.category} · الجولة ${roomData.round}${roomData.maxRounds?' من '+roomData.maxRounds:''}`);const tm=el('span');tm.id='timer';h2.append(tm);box.append(h2);
+    if(over&&roomData.maxRounds>0&&roomData.round>=roomData.maxRounds){const rk=[...players].sort((a,b)=>(b.score||0)-(a.score||0));st.append(el('div','banner','🏁 انتهت اللعبة! الترتيب: '+rk.map((p,i)=>['🥇','🥈','🥉','4️⃣'][i]+' '+p.name+' ('+(p.score||0)+')').join(' · ')))}
+    const g=el('div','grid');players.forEach(p=>g.append(tile(p,over)));box.append(g);
+  }
+  if(isHost){
+    const r=el('div','row'),sel=el('select');
+    [['__rand','🎲 عشوائي'],...Object.keys(CATS).map(c=>[c,c])].forEach(([v,l])=>{const o=el('option',null,l);o.value=v;sel.append(o)});
+    sel.value=pickCat||'__rand';sel.onchange=()=>pickCat=sel.value;
+    const b=el('button',null,playing?((roomData.maxRounds>0&&roomData.round>=roomData.maxRounds)?'🆕 لعبة جديدة':'🔄 جولة جديدة'):'▶️ ابدأ اللعب');b.disabled=players.length<2;b.onclick=startRound;
+    const mk=(opts,cur,fn)=>{const s=el('select');opts.forEach(([v,l])=>{const o=el('option',null,l);o.value=v;s.append(o)});s.value=String(cur);s.onchange=()=>fn(s.value);return s};
+    const lab=(t,s)=>{const d=el('label','set');d.append(el('span','hint',t),s);return d};
+    const sr=el('div','row');
+    sr.append(lab('الفئة في هذه الجولة',sel),lab('عدد الجولات',mk([[0,'بلا حد'],[3,'٣'],[5,'٥'],[10,'١٠']],pickRounds??(roomData.maxRounds||0),v=>pickRounds=+v)),lab('المؤقت',mk([[0,'بدون'],[60,'دقيقة'],[120,'دقيقتان'],[180,'٣ دقائق'],[300,'٥ دقائق']],pickSecs??(roomData.secs??180),v=>pickSecs=+v)));
+    box.append(sr);r.append(b);box.append(r);
+    if(players.length<2)box.append(el('div','hint','يلزم لاعبان على الأقل. شارك رمز الغرفة مع أصدقائك.'));
+  }else if(!playing)box.append(el('div','hint','بانتظار المضيف ليبدأ اللعبة…'));
+  st.append(box);
+  $('#guessbar').hidden=!(playing&&mine&&!mine.revealed&&mine.card>=0&&!isOver());tick();
+}
+async function startRound(){
+  const keys=Object.keys(CATS),pc=pickCat||'__rand',cat=pc==='__rand'?keys[Math.floor(Math.random()*keys.length)]:pc,n=CATS[cat].length;
+  const secs=pickSecs??(roomData.secs??180),mr=pickRounds??(roomData.maxRounds||0),fresh=(roomData.maxRounds||0)>0&&(roomData.round||0)>=roomData.maxRounds;
+  const idx=[...Array(n).keys()].sort(()=>Math.random()-.5),ps=players.slice(0,4);
+  try{
+    await Promise.all(ps.map((p,i)=>db.doc(`rooms/${room}/players/${p.id}`).update({cat,card:idx[i],revealed:false,gaveUp:false,...(fresh?{score:0}:{})})));
+    await db.doc('rooms/'+room).update({status:'playing',category:cat,round:fresh?1:(roomData.round||0)+1,endsAt:secs>0?Date.now()+secs*1000:0,secs,maxRounds:mr});
+    say(`🎮 بدأت الجولة — الفئة: ${cat}. اسألوا في الدردشة!${secs?` لديكم ${secs/60} دقيقة ⏱️`:''}`);
+  }catch(e){}
+}
+function say(text){return db.collection(`rooms/${room}/msgs`).add({sys:true,text,t:Date.now()})}
+function isOver(){return !!roomData&&roomData.status==='playing'&&(Date.now()>=(roomData.endsAt||Infinity)||(players.length>1&&players.every(p=>p.revealed)))}
+function drawChat(){
+  const b=$('#msgs'),stick=b.scrollTop+b.clientHeight>=b.scrollHeight-40;
+  b.replaceChildren(...msgs.map(m=>{const d=el('div','m'+(m.sys?' sys':''));if(!m.sys)d.append(el('b',null,m.name+': '));d.append(document.createTextNode(m.text));return d}));
+  if(stick)b.scrollTop=b.scrollHeight;
+}
+async function sendMsg(){
+  const i=$('#msg'),t=i.value.trim();if(!t||!room)return;i.value='';
+  try{await db.collection(`rooms/${room}/msgs`).add({uid,name:uname||'لاعب',text:t,t:Date.now()})}catch(e){}
+}
+$('#send').onclick=sendMsg;$('#msg').onkeydown=e=>{if(e.key==='Enter')sendMsg()};
+async function doGuess(){
+  const i=$('#guess'),v=i.value.trim(),me=players.find(p=>p.id===uid);if(!v||!me||me.card<0||me.revealed||isOver())return;i.value='';
+  const it=CATS[me.cat][me.card],ok=norm(v)===norm(it[1]);
+  try{
+    await db.collection(`rooms/${room}/msgs`).add({uid,name:me.name,text:`🎯 تخمين: ${v} ${ok?'✅':'❌'}`,t:Date.now()});
+    if(ok){const pts=Math.max(1,3-players.filter(p=>p.revealed&&!p.gaveUp).length);await db.doc(`rooms/${room}/players/${uid}`).update({revealed:true,gaveUp:false,score:(me.score||0)+pts});say(`🎉 ${me.name} عرف صورته: ${it[0]} ${it[1]} (+${pts} ⭐)`)}
+  }catch(e){}
+}
+$('#gbtn').onclick=doGuess;$('#guess').onkeydown=e=>{if(e.key==='Enter')doGuess()};
+async function giveUp(){
+  const me=players.find(p=>p.id===uid);if(!me||me.revealed||me.card<0||isOver())return;
+  const it=CATS[me.cat][me.card];
+  try{await db.doc(`rooms/${room}/players/${uid}`).update({revealed:true,gaveUp:true});say(`🏳️ ${me.name} استسلم. صورته: ${it[0]} ${it[1]}`)}catch(e){}
+}
+$('#giveup').onclick=giveUp;
+let wasOver=false;
+function tick(){
+  const tm=$('#timer');
+  if(tm&&roomData&&roomData.status==='playing'&&roomData.endsAt){
+    const s=Math.max(0,Math.ceil((roomData.endsAt-Date.now())/1000));
+    tm.textContent=' · ⏱️ '+Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+  }
+  const o=isOver();if(o!==wasOver){wasOver=o;if(room)draw()}
+}
+setInterval(tick,1000);
+</script>
+</body>
+</html>
